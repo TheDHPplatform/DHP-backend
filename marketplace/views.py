@@ -13,7 +13,6 @@ from .filters import ProductFilter
 from rest_framework.parsers import MultiPartParser
 from drf_yasg.utils import swagger_auto_schema
 
-@swagger_auto_schema(tags=['Categories'])
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -24,7 +23,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return super().get_permissions()
     
-@swagger_auto_schema(tags=['Products'])
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).select_related('category', 'seller').prefetch_related('images')
     parser_classes = [MultiPartParser]
@@ -55,7 +53,6 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@swagger_auto_schema(tags=['Reviews'])
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]
@@ -69,7 +66,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-@swagger_auto_schema(tags=['Carts'])
 class CartViewSet(viewsets.ModelViewSet):
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
@@ -110,7 +106,6 @@ class CartViewSet(viewsets.ModelViewSet):
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
-@swagger_auto_schema(tags=['Orders'])
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
@@ -136,7 +131,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         return Response({'message': 'Order created successfully'}, status=status.HTTP_201_CREATED)
 
-@swagger_auto_schema(tags=['Wishlists'])
 class WishlistViewSet(viewsets.ModelViewSet):
     serializer_class = WishlistSerializer
     permission_classes = [IsAuthenticated]

@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 
+import drf_spectacular
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -43,6 +45,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'marketplace',
     'authentication',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -152,7 +155,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
 }
 
 SWAGGER_SETTINGS = {
@@ -164,4 +168,11 @@ SWAGGER_SETTINGS = {
             'description': "JWT Authorization header using the Bearer scheme. Example: 'Bearer <token>'",
         }
     },
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'DHP API',
+    'DESCRIPTION': 'DHP description',
+    'VERSION': '1.0.0',
+    'SCHEMA_PATH_PREFIX': r'\/api(\/market)?',
 }
