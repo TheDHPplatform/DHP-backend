@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 import drf_spectacular
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -109,7 +109,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
@@ -176,3 +175,5 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SCHEMA_PATH_PREFIX': r'\/api(\/market)?',
 }
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
