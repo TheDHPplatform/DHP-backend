@@ -41,21 +41,33 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    # def upload_image(self, image_file, is_primary=False):
+    #     uploader = ImageUploadService()
+    #     image_url = uploader.upload_product_image(
+    #         image_file=image_file,
+    #         product_id=str(self.id),
+    #         is_primary=is_primary
+    #     )
+        
+    #     if image_url:
+    #         return ProductImage.objects.create(
+    #             product=self,
+    #             image_url=image_url,
+    #             is_primary=is_primary
+    #         )
+    #     return None
+
     def upload_image(self, image_file, is_primary=False):
-        uploader = ImageUploadService()
-        image_url = uploader.upload_product_image(
-            image_file=image_file,
-            product_id=str(self.id),
+        """
+        Use this method only if you need to programmatically attach an uploaded file
+        (e.g., from a form or API view using InMemoryUploadedFile).
+        """
+        return ProductImage.objects.create(
+            product=self,
+            image=image_file,
             is_primary=is_primary
         )
-        
-        if image_url:
-            return ProductImage.objects.create(
-                product=self,
-                image_url=image_url,
-                is_primary=is_primary
-            )
-        return None
+
 
 
     def __str__(self):
@@ -63,15 +75,9 @@ class Product(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image_url = models.URLField(max_length=500)
+    image = models.ImageField(upload_to='product_images/')
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    def delete(self, *args, **kwargs):
-        uploader = ImageUploadService()
-        path = self.image_url.split('/')[-1]
-        uploader.delete_image('product-images', path)
-        super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"Image for {self.product.name}"

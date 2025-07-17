@@ -12,7 +12,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ['image_url', 'is_primary']
+        fields = ['image', 'is_primary']  # Directly use the image field
 
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, required=False)
@@ -33,21 +33,14 @@ class ProductSerializer(serializers.ModelSerializer):
         uploaded_images = validated_data.pop('uploaded_images', [])
         product = super().create(validated_data)
         
-        if uploaded_images:
-            upload_service = ImageUploadService()
-            for i, image_file in enumerate(uploaded_images):
-                is_primary = i == 0  # First image is primary
-                image_url = upload_service.upload_product_image(
-                    image_file=image_file,
-                    product_id=str(product.id),
-                    is_primary=is_primary
-                )
-                if image_url:
-                    ProductImage.objects.create(
-                        product=product,
-                        image_url=image_url,
-                        is_primary=is_primary
-                    )
+        # Handle image uploads directly
+        for i, image_file in enumerate(uploaded_images):
+            is_primary = i == 0  # First image is primary
+            ProductImage.objects.create(
+                product=product,
+                image=image_file,
+                is_primary=is_primary
+            )
         
         return product
 
@@ -55,20 +48,13 @@ class ProductSerializer(serializers.ModelSerializer):
         uploaded_images = validated_data.pop('uploaded_images', [])
         product = super().update(instance, validated_data)
         
-        if uploaded_images:
-            upload_service = ImageUploadService()
-            for image_file in uploaded_images:
-                image_url = upload_service.upload_product_image(
-                    image_file=image_file,
-                    product_id=str(product.id),
-                    is_primary=False
-                )
-                if image_url:
-                    ProductImage.objects.create(
-                        product=product,
-                        image_url=image_url,
-                        is_primary=False
-                    )
+        # Handle image uploads directly
+        for image_file in uploaded_images:
+            ProductImage.objects.create(
+                product=product,
+                image=image_file,
+                is_primary=False
+            )
         
         return product
 

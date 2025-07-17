@@ -40,9 +40,17 @@ class ProductViewSet(viewsets.ModelViewSet):
             return []
         return super().get_parsers()
 
-    
     def perform_create(self, serializer):
-        serializer.save(seller=self.request.user)
+        product = serializer.save(seller=self.request.user)
+        # Handle uploaded images directly
+        uploaded_images = self.request.FILES.getlist('uploaded_images')  # Retrieve images from the request
+        for i, image_file in enumerate(uploaded_images):
+            is_primary = i == 0  # First image will be primary
+            ProductImage.objects.create(
+                product=product,
+                image=image_file,
+                is_primary=is_primary
+            )
     
     @action(detail=True, methods=['post'])
     def add_review(self, request, pk=None):
@@ -52,6 +60,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             serializer.save(product=product, user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
