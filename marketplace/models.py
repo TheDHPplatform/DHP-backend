@@ -9,7 +9,7 @@ class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
-    image = models.ImageField(upload_to='category_images/', null=True, blank=True)
+    image = models.TextField()
 
     class Meta:
         verbose_name_plural = "Categories"
@@ -75,7 +75,7 @@ class Product(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='product_images/')
+    image = models.TextField()
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -161,3 +161,4 @@ class Wishlist(models.Model):
 
     def __str__(self):
         return f"Wishlist for {self.user.username}"
+    
