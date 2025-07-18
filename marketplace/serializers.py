@@ -19,7 +19,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, required=False, read_only=True)
     uploaded_images = serializers.ListField(
-        child=Base64ImageField(),
+        child=serializers.CharField(),
         write_only=True,
         required=False
     )
@@ -39,11 +39,12 @@ class ProductSerializer(serializers.ModelSerializer):
         # Handle image uploads directly
         for i, image_file in enumerate(uploaded_images):
             is_primary = i == 0  # First image is primary
-            ProductImage.objects.create(
+            image = ProductImage.objects.create(
                 product=product,
                 image=image_file,
                 is_primary=is_primary
             )
+            print(image.__dict__, image_file)
         
         return product
 
