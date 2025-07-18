@@ -42,15 +42,15 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         product = serializer.save(seller=self.request.user)
-        # Handle uploaded images directly
-        uploaded_images = self.request.get('uploaded_images')  # Retrieve images from the request
-        for i, image_file in enumerate(uploaded_images):
-            is_primary = i == 0  # First image will be primary
-            ProductImage.objects.create(
-                product=product,
-                image=image_file,
-                is_primary=is_primary
-            )
+    #     # Handle uploaded images directly
+    #     # uploaded_images = self.request.get('uploaded_images')  # Retrieve images from the request
+    #     for i, image_file in enumerate(uploaded_images):
+    #         is_primary = i == 0  # First image will be primary
+    #         ProductImage.objects.create(
+    #             product=product,
+    #             image=image_file,
+    #             is_primary=is_primary
+    #         )
     
     @action(detail=True, methods=['post'])
     def add_review(self, request, pk=None):
@@ -93,6 +93,7 @@ class CartViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def add_item(self, request):
+        
         cart, _ = Cart.objects.get_or_create(user=request.user)
         product_id = request.data.get('product_id')
         quantity = request.data.get('quantity', 1)
