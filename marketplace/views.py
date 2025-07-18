@@ -25,7 +25,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).select_related('category', 'seller').prefetch_related('images')
-    parser_classes = [MultiPartParser]
+    # parser_classes = [MultiPartParser]
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProductFilter
@@ -35,15 +35,15 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return [IsAuthenticated()]
 
-    def get_parsers(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return []
-        return super().get_parsers()
+    # def get_parsers(self):
+    #     if getattr(self, 'swagger_fake_view', False):
+    #         return []
+    #     return super().get_parsers()
 
     def perform_create(self, serializer):
         product = serializer.save(seller=self.request.user)
         # Handle uploaded images directly
-        uploaded_images = self.request.FILES.getlist('uploaded_images')  # Retrieve images from the request
+        uploaded_images = self.request.get('uploaded_images')  # Retrieve images from the request
         for i, image_file in enumerate(uploaded_images):
             is_primary = i == 0  # First image will be primary
             ProductImage.objects.create(

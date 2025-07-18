@@ -3,8 +3,10 @@ from rest_framework import serializers
 from utils.image_service import ImageUploadService
 from .models import Category, Product, ProductImage, Review, Cart, CartItem, Order, OrderItem, Wishlist
 from authentication.serializers import UserSerializer
+from drf_extra_fields.fields import Base64ImageField
 
 class CategorySerializer(serializers.ModelSerializer):
+    slug = serializers.SlugField(read_only=True)
     class Meta:
         model = Category
         fields = '__all__'
@@ -15,12 +17,13 @@ class ProductImageSerializer(serializers.ModelSerializer):
         fields = ['image', 'is_primary']  # Directly use the image field
 
 class ProductSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, required=False)
+    images = ProductImageSerializer(many=True, required=False, read_only=True)
     uploaded_images = serializers.ListField(
-        child=serializers.ImageField(max_length=None, allow_empty_file=False),
+        child=Base64ImageField(),
         write_only=True,
         required=False
     )
+    slug = serializers.SlugField(read_only=True)
     
     class Meta:
         model = Product
