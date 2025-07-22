@@ -119,3 +119,6 @@ class WishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wishlist
         fields = ['id', 'products', 'created_at', 'updated_at']
+
+class ToggleProductSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()

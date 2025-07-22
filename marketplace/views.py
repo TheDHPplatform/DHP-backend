@@ -7,12 +7,14 @@ from .models import Category, Product, ProductImage, Review, Cart, CartItem, Ord
 from .serializers import (
     AddCartItemSerializer, CategorySerializer, ProductSerializer, ProductImageSerializer,
     ReviewSerializer, CartSerializer, CartItemSerializer,
-    OrderSerializer, OrderItemSerializer, WishlistSerializer
+    OrderSerializer, OrderItemSerializer, ToggleProductSerializer, WishlistSerializer
 )
 from .filters import ProductFilter
 from rest_framework.parsers import MultiPartParser
 from drf_yasg.utils import swagger_auto_schema
 from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from rest_framework import serializers
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -146,6 +148,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         # 5. Clearing cart
         
         return Response({'message': 'Order created successfully'}, status=status.HTTP_201_CREATED)
+    
+class ToggleProductResponseSerializer(serializers.Serializer):
+    added = serializers.BooleanField()
+    product_id = serializers.IntegerField()
+
 
 class WishlistViewSet(viewsets.ModelViewSet):
     serializer_class = WishlistSerializer
@@ -156,6 +163,11 @@ class WishlistViewSet(viewsets.ModelViewSet):
             return Wishlist.objects.none()
         return Wishlist.objects.filter(user=self.request.user)
         
+    @extend_schema(
+        request=ToggleProductSerializer,
+        responses={200: ToggleProductResponseSerializer},
+        description="Toggle a product in the user's wishlist (add or remove)."
+    )
     @action(detail=False, methods=['post'])
     def toggle_product(self, request):
         product_id = request.data.get('product_id')
