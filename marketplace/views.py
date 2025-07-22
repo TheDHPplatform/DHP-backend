@@ -5,13 +5,14 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Category, Product, ProductImage, Review, Cart, CartItem, Order, OrderItem, Wishlist
 from .serializers import (
-    CategorySerializer, ProductSerializer, ProductImageSerializer,
+    AddCartItemSerializer, CategorySerializer, ProductSerializer, ProductImageSerializer,
     ReviewSerializer, CartSerializer, CartItemSerializer,
     OrderSerializer, OrderItemSerializer, WishlistSerializer
 )
 from .filters import ProductFilter
 from rest_framework.parsers import MultiPartParser
 from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -91,6 +92,11 @@ class CartViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(cart)
         return Response(serializer.data)
     
+    @extend_schema(
+        request=AddCartItemSerializer,
+        responses={200: CartSerializer},
+        description="Add an item to the user's cart."
+    )
     @action(detail=False, methods=['post'])
     def add_item(self, request):
         
