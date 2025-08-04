@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_yasg',
     'marketplace',
+    'digital_repo',
     'authentication',
     'drf_spectacular',
 ]
@@ -156,7 +157,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 SWAGGER_SETTINGS = {
@@ -174,7 +177,7 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'DHP API',
     'DESCRIPTION': 'DHP description',
     'VERSION': '1.0.0',
-    'SCHEMA_PATH_PREFIX': r'\/api(\/market)?',
+    'SCHEMA_PATH_PREFIX': r'\/api(\/digital-repo)?',
 }
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
