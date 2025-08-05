@@ -177,7 +177,8 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'DHP API',
     'DESCRIPTION': 'DHP description',
     'VERSION': '1.0.0',
-    'SCHEMA_PATH_PREFIX': r'\/api(\/digital-repo)?',
+    # 'SCHEMA_PATH_PREFIX': r'\/api(\/market)?',
+    # 'SCHEMA_PATH_PREFIX': r'\/api(\/digital-repo)?',
 }
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

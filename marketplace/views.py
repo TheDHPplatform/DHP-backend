@@ -20,11 +20,26 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAdminUser]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        queryset = queryset.prefetch_related('products').filter(products__isnull=False).distinct()
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return super().get_permissions()
+    
+    @action(detail=False, methods=['get'])
+    def populated_categories(self, request):
+        categories = Category.objects.prefetch_related('products').all()
+        serializer = self.get_serializer(categories, many=True)
+        return Response(serializer.data)
     
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).select_related('category', 'seller').prefetch_related('images')
@@ -86,6 +101,8 @@ class CartViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_anonymous:
             return Cart.objects.none()
+        if user.is_staff or user.is_superuser:
+            return Cart.objects.all()
         return Cart.objects.filter(user=user)
     
     @action(detail=False, methods=['get'])
@@ -111,6 +128,9 @@ class CartViewSet(viewsets.ModelViewSet):
         except Product.DoesNotExist:
             return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         
+        if product.stock < quantity:
+            return Response({'error': 'Insufficient stock'}, status=status.HTTP_400_BAD_REQUEST)
+
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
@@ -121,6 +141,8 @@ class CartViewSet(viewsets.ModelViewSet):
             cart_item.quantity += int(quantity)
             cart_item.save()
         
+        product.stock -= int(quantity)
+        product.save()
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
