@@ -23,8 +23,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        
-        queryset = queryset.prefetch_related('products').filter(products__isnull=False).distinct()
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser):
+            queryset = queryset.all()
+        else:
+            queryset = queryset.prefetch_related('products').filter(products__isnull=False).distinct()
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
