@@ -4,6 +4,7 @@ from rest_framework import permissions
 from rest_framework.decorators import action
 from .serializers import UserSerializer
 from django.contrib.auth import get_user_model
+from rest_framework.response import Response
 
 User = get_user_model()
 
