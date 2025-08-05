@@ -241,12 +241,12 @@ class LibraryDocumentViewSet(viewsets.ModelViewSet):
         # Subject filter
         subject = request.query_params.get('subject', '')
         if subject:
-            queryset = queryset.filter(subjects__slug=subject)
+            queryset = queryset.filter(subjects__contains=[subject])
         
         # Author filter
         author = request.query_params.get('author', '')
         if author:
-            queryset = queryset.filter(authors__slug=author)
+            queryset = queryset.filter(authors__contains=[author])
         
         # Publisher filter
         publisher = request.query_params.get('publisher', '')
@@ -529,3 +529,129 @@ class MuseumCollectionViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return MuseumCollectionDetailSerializer
         return MuseumCollectionSerializer
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.models import User
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_content_overview(request):
+    """Get overview of all content uploaded by the current user"""
+    user = request.user
+    
+    # Get user's artworks
+    user_artworks = Artwork.objects.filter(uploaded_by=user)
+    artworks_data = []
+    for artwork in user_artworks:
+        artworks_data.append({
+            'id': str(artwork.id),
+            'title': artwork.title,
+            'type': 'artwork',
+            'thumbnail': artwork.image.url if artwork.image else None,
+            'description': artwork.description,
+            'created_at': artwork.created_at.isoformat(),
+            'updated_at': artwork.updated_at.isoformat(),
+            'status': 'published' if artwork.is_public else 'private',
+            'views': artwork.view_count,
+            'downloads': 0,  # Artworks don't have download tracking
+            'likes': 0,  # Would need to implement likes system
+            'comments': 0,  # Would need to implement comments system
+            'category': artwork.category.name if artwork.category else '',
+            'tags': artwork.get_tags_list(),
+            'access_level': 'public' if artwork.is_public else 'private'
+        })
+    
+    # Get user's library documents
+    user_documents = LibraryDocument.objects.filter(uploaded_by=user)
+    documents_data = []
+    for doc in user_documents:
+        documents_data.append({
+            'id': str(doc.id),
+            'title': doc.title,
+            'type': 'document',
+            'thumbnail': doc.cover_image.url if doc.cover_image else None,
+            'description': doc.description,
+            'created_at': doc.created_at.isoformat(),
+            'updated_at': doc.updated_at.isoformat(),
+            'status': 'published',
+            'views': doc.view_count,
+            'downloads': doc.download_count,
+            'likes': 0,  # Would need to implement likes system
+            'comments': 0,  # Would need to implement comments system
+            'category': doc.document_type.name if doc.document_type else '',
+            'tags': [tag.strip() for tag in doc.tags.split(',') if tag.strip()] if doc.tags else [],
+            'file_size': doc.file_size,
+            'access_level': doc.access_level
+        })
+    
+    # Get user's museums
+    user_museums = Museum.objects.filter(created_by=user)
+    museums_data = []
+    for museum in user_museums:
+        museums_data.append({
+            'id': str(museum.id),
+            'title': museum.name,
+            'type': 'museum',
+            'thumbnail': museum.main_image.url if museum.main_image else None,
+            'description': museum.description,
+            'created_at': museum.created_at.isoformat(),
+            'updated_at': museum.updated_at.isoformat(),
+            'status': museum.status,
+            'views': museum.view_count,
+            'downloads': 0,  # Museums don't have downloads
+            'likes': 0,  # Would need to implement likes system
+            'comments': museum.review_count,
+            'category': museum.category.name if museum.category else '',
+            'tags': museum.get_tags_list(),
+            'access_level': museum.access_level
+        })
+    
+    # Get user's collections
+    user_collections = Collection.objects.filter(curator=user)
+    collections_data = []
+    for collection in user_collections:
+        collections_data.append({
+            'id': str(collection.id),
+            'title': collection.name,
+            'type': 'collection',
+            'thumbnail': None,  # Collections don't have thumbnails in current model
+            'description': collection.description,
+            'created_at': collection.created_at.isoformat(),
+            'updated_at': collection.updated_at.isoformat(),
+            'status': 'published',
+            'views': 0,  # Collections don't have view tracking
+            'downloads': 0,
+            'likes': 0,
+            'comments': 0,
+            'category': collection.get_collection_type_display(),
+            'tags': [],
+            'access_level': 'public'
+        })
+    
+    # Combine all content
+    all_content = artworks_data + documents_data + museums_data + collections_data
+    
+    # Calculate totals
+    total_views = sum(item['views'] for item in all_content)
+    total_downloads = sum(item['downloads'] for item in all_content)
+    total_likes = sum(item['likes'] for item in all_content)
+    total_comments = sum(item['comments'] for item in all_content)
+    
+    return Response({
+        'content': all_content,
+        'stats': {
+            'total_items': len(all_content),
+            'total_views': total_views,
+            'total_downloads': total_downloads,
+            'total_likes': total_likes,
+            'total_comments': total_comments,
+            'by_type': {
+                'artworks': len(artworks_data),
+                'documents': len(documents_data),
+                'museums': len(museums_data),
+                'collections': len(collections_data)
+            }
+        }
+    })

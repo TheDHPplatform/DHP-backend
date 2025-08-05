@@ -57,14 +57,12 @@ class AuthorSerializer(serializers.ModelSerializer):
 
 class LibraryDocumentSerializer(serializers.ModelSerializer):
     authors_display = serializers.CharField(source='get_authors_display', read_only=True)
+    subjects_display = serializers.CharField(source='get_subjects_display', read_only=True)
     document_type_name = serializers.CharField(source='document_type.name', read_only=True)
     publisher_name = serializers.CharField(source='publisher.name', read_only=True)
-    subjects_display = serializers.SerializerMethodField()
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
-    
-    def get_subjects_display(self, obj):
-        return [subject.name for subject in obj.subjects.all()]
+    uploaded_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
     
     def get_average_rating(self, obj):
         reviews = obj.reviews.all()
@@ -80,8 +78,6 @@ class LibraryDocumentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class LibraryDocumentDetailSerializer(LibraryDocumentSerializer):
-    authors = AuthorSerializer(many=True, read_only=True)
-    subjects = SubjectSerializer(many=True, read_only=True)
     document_type = DocumentTypeSerializer(read_only=True)
     publisher = PublisherSerializer(read_only=True)
     collections = serializers.SerializerMethodField()

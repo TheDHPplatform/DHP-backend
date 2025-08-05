@@ -72,3 +72,4 @@ class MuseumCollectionAdmin(admin.ModelAdmin):
 
 # Other existing models can be registered here as well
 # Register your models here.
+admin.site.register([DocumentType, LibraryDocument])

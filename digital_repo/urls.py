@@ -26,4 +26,6 @@ router.register(r'museums/exhibitions', views.MuseumExhibitionViewSet)
 router.register(r'museums/reviews', views.MuseumReviewViewSet)
 router.register(r'museums/collections', views.MuseumCollectionViewSet)
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('user/content/', views.user_content_overview, name='user-content-overview'),
+] + router.urls

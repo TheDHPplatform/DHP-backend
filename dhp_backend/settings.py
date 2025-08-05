@@ -150,7 +150,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-MEDIA_URL = '/media/'
+MEDIA_URL = 'http://localhost:8000/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 REST_FRAMEWORK = {

@@ -163,8 +163,8 @@ class LibraryDocument(models.Model):
     
     # Document Details
     document_type = models.ForeignKey(DocumentType, on_delete=models.CASCADE, related_name='documents')
-    authors = models.ManyToManyField(Author, related_name='documents')
-    subjects = models.ManyToManyField(Subject, related_name='documents')
+    authors = models.JSONField(default=list, blank=True, help_text="List of author names")
+    subjects = models.JSONField(default=list, blank=True, help_text="List of subject names")
     publisher = models.ForeignKey(Publisher, on_delete=models.SET_NULL, null=True, blank=True, related_name='documents')
     
     # Publication Details
@@ -218,7 +218,14 @@ class LibraryDocument(models.Model):
         self.save(update_fields=['download_count'])
     
     def get_authors_display(self):
-        return ", ".join([author.name for author in self.authors.all()])
+        if isinstance(self.authors, list):
+            return ", ".join(self.authors)
+        return ""
+    
+    def get_subjects_display(self):
+        if isinstance(self.subjects, list):
+            return ", ".join(self.subjects)
+        return ""
     
     def __str__(self):
         return self.title
