@@ -28,4 +28,5 @@ router.register(r'museums/collections', views.MuseumCollectionViewSet)
 
 urlpatterns = [
     path('user/content/', views.user_content_overview, name='user-content-overview'),
+    path('admin/statistics/', views.admin_statistics_overview, name='admin-statistics-overview'),
 ] + router.urls

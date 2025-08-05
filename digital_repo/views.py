@@ -532,8 +532,11 @@ class MuseumCollectionViewSet(viewsets.ModelViewSet):
 
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.contrib.auth.models import User
+from django.db.models import Sum, Avg, Count
+from django.utils import timezone
+from datetime import datetime, timedelta
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -654,4 +657,281 @@ def user_content_overview(request):
                 'collections': len(collections_data)
             }
         }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_statistics_overview(request):
+    """Get comprehensive statistics for admin dashboard"""
+    
+    # Calculate date ranges
+    now = timezone.now()
+    today = now.date()
+    yesterday = today - timedelta(days=1)
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    year_ago = today - timedelta(days=365)
+    
+    # User Statistics
+    total_users = User.objects.count()
+    active_users_today = User.objects.filter(last_login__date=today).count()
+    active_users_week = User.objects.filter(last_login__gte=week_ago).count()
+    active_users_month = User.objects.filter(last_login__gte=month_ago).count()
+    new_users_today = User.objects.filter(date_joined__date=today).count()
+    new_users_week = User.objects.filter(date_joined__gte=week_ago).count()
+    new_users_month = User.objects.filter(date_joined__gte=month_ago).count()
+    
+    # Content Statistics
+    # Artworks
+    total_artworks = Artwork.objects.count()
+    public_artworks = Artwork.objects.filter(is_public=True).count()
+    private_artworks = total_artworks - public_artworks
+    featured_artworks = Artwork.objects.filter(is_featured=True).count()
+    artworks_today = Artwork.objects.filter(created_at__date=today).count()
+    artworks_week = Artwork.objects.filter(created_at__gte=week_ago).count()
+    artworks_month = Artwork.objects.filter(created_at__gte=month_ago).count()
+    total_artwork_views = Artwork.objects.aggregate(total_views=Sum('view_count'))['total_views'] or 0
+    
+    # Documents
+    total_documents = LibraryDocument.objects.count()
+    public_documents = LibraryDocument.objects.filter(access_level='public').count()
+    restricted_documents = LibraryDocument.objects.filter(access_level='restricted').count()
+    private_documents = LibraryDocument.objects.filter(access_level='private').count()
+    featured_documents = LibraryDocument.objects.filter(is_featured=True).count()
+    downloadable_documents = LibraryDocument.objects.filter(is_downloadable=True).count()
+    documents_today = LibraryDocument.objects.filter(created_at__date=today).count()
+    documents_week = LibraryDocument.objects.filter(created_at__gte=week_ago).count()
+    documents_month = LibraryDocument.objects.filter(created_at__gte=month_ago).count()
+    total_document_views = LibraryDocument.objects.aggregate(total_views=Sum('view_count'))['total_views'] or 0
+    total_document_downloads = LibraryDocument.objects.aggregate(total_downloads=Sum('download_count'))['total_downloads'] or 0
+    
+    # Museums
+    total_museums = Museum.objects.count()
+    active_museums = Museum.objects.filter(status='active').count()
+    featured_museums = Museum.objects.filter(is_featured=True).count()
+    museums_today = Museum.objects.filter(created_at__date=today).count()
+    museums_week = Museum.objects.filter(created_at__gte=week_ago).count()
+    museums_month = Museum.objects.filter(created_at__gte=month_ago).count()
+    total_museum_views = Museum.objects.aggregate(total_views=Sum('view_count'))['total_views'] or 0
+    total_museum_visitors = Museum.objects.aggregate(total_visitors=Sum('visitor_count'))['total_visitors'] or 0
+    
+    # Collections
+    total_collections = Collection.objects.count()
+    featured_collections = Collection.objects.filter(is_featured=True).count()
+    collections_today = Collection.objects.filter(created_at__date=today).count()
+    collections_week = Collection.objects.filter(created_at__gte=week_ago).count()
+    collections_month = Collection.objects.filter(created_at__gte=month_ago).count()
+    
+    # Library Collections
+    total_library_collections = LibraryCollection.objects.count()
+    featured_library_collections = LibraryCollection.objects.filter(is_featured=True).count()
+    
+    # Categories and Types
+    total_categories = Category.objects.count()
+    total_document_types = DocumentType.objects.count()
+    total_museum_categories = MuseumCategory.objects.count()
+    total_subjects = Subject.objects.count()
+    total_authors = Author.objects.count()
+    total_publishers = Publisher.objects.count()
+    
+    # Reviews and Engagement
+    total_document_reviews = DocumentReview.objects.count()
+    total_museum_reviews = MuseumReview.objects.count()
+    avg_document_rating = DocumentReview.objects.aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
+    avg_museum_rating = MuseumReview.objects.aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
+    
+    # Reading Lists
+    total_reading_lists = ReadingList.objects.count()
+    public_reading_lists = ReadingList.objects.filter(is_public=True).count()
+    private_reading_lists = total_reading_lists - public_reading_lists
+    
+    # Exhibitions
+    total_exhibitions = Exhibition.objects.count()
+    total_museum_exhibitions = MuseumExhibition.objects.count()
+    active_exhibitions = Exhibition.objects.filter(
+        start_date__lte=today,
+        end_date__gte=today
+    ).count()
+    active_museum_exhibitions = MuseumExhibition.objects.filter(
+        start_date__lte=today,
+        end_date__gte=today,
+        is_active=True
+    ).count()
+    
+    # Top Performers
+    top_viewed_artworks = Artwork.objects.order_by('-view_count')[:5].values('title', 'view_count', 'slug')
+    top_viewed_documents = LibraryDocument.objects.order_by('-view_count')[:5].values('title', 'view_count', 'slug')
+    top_downloaded_documents = LibraryDocument.objects.order_by('-download_count')[:5].values('title', 'download_count', 'slug')
+    top_viewed_museums = Museum.objects.order_by('-view_count')[:5].values('name', 'view_count', 'slug')
+    
+    # Top contributors - calculate based on actual uploads
+    top_contributors = []
+    users_with_uploads = User.objects.annotate(
+        artwork_count=Count('uploaded_artworks'),
+        document_count=Count('uploaded_documents'),
+        museum_count=Count('created_museums')
+    ).filter(
+        artwork_count__gt=0
+    ).union(
+        User.objects.annotate(
+            artwork_count=Count('uploaded_artworks'),
+            document_count=Count('uploaded_documents'),
+            museum_count=Count('created_museums')
+        ).filter(document_count__gt=0)
+    ).union(
+        User.objects.annotate(
+            artwork_count=Count('uploaded_artworks'),
+            document_count=Count('uploaded_documents'),
+            museum_count=Count('created_museums')
+        ).filter(museum_count__gt=0)
+    )
+    
+    for user in users_with_uploads[:5]:
+        artwork_count = user.uploaded_artworks.count()
+        document_count = user.uploaded_documents.count()
+        museum_count = user.created_museums.count()
+        total_uploads = artwork_count + document_count + museum_count
+        
+        top_contributors.append({
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'total_uploads': total_uploads,
+            'artworks': artwork_count,
+            'documents': document_count,
+            'museums': museum_count
+        })
+    
+    # Content by category/type
+    artworks_by_category = list(Category.objects.annotate(
+        artwork_count=Count('artworks')
+    ).values('name', 'artwork_count').order_by('-artwork_count')[:10])
+    
+    documents_by_type = list(DocumentType.objects.annotate(
+        document_count=Count('documents')
+    ).values('name', 'document_count').order_by('-document_count')[:10])
+    
+    museums_by_category = list(MuseumCategory.objects.annotate(
+        museum_count=Count('museums')
+    ).values('name', 'museum_count').order_by('-museum_count')[:10])
+    
+    # Growth trends (last 12 months)
+    monthly_stats = []
+    for i in range(12):
+        month_start = (now - timedelta(days=30*i)).replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        
+        monthly_stats.append({
+            'month': month_start.strftime('%Y-%m'),
+            'users': User.objects.filter(date_joined__range=[month_start, month_end]).count(),
+            'artworks': Artwork.objects.filter(created_at__range=[month_start, month_end]).count(),
+            'documents': LibraryDocument.objects.filter(created_at__range=[month_start, month_end]).count(),
+            'museums': Museum.objects.filter(created_at__range=[month_start, month_end]).count(),
+        })
+    
+    monthly_stats.reverse()  # Show oldest to newest
+    
+    return Response({
+        'overview': {
+            'total_users': total_users,
+            'total_content_items': total_artworks + total_documents + total_museums + total_collections,
+            'total_views': total_artwork_views + total_document_views + total_museum_views,
+            'total_downloads': total_document_downloads,
+            'total_visitors': total_museum_visitors,
+            'generated_at': now.isoformat()
+        },
+        'users': {
+            'total': total_users,
+            'active_today': active_users_today,
+            'active_this_week': active_users_week,
+            'active_this_month': active_users_month,
+            'new_today': new_users_today,
+            'new_this_week': new_users_week,
+            'new_this_month': new_users_month,
+            'top_contributors': top_contributors
+        },
+        'content': {
+            'artworks': {
+                'total': total_artworks,
+                'public': public_artworks,
+                'private': private_artworks,
+                'featured': featured_artworks,
+                'added_today': artworks_today,
+                'added_this_week': artworks_week,
+                'added_this_month': artworks_month,
+                'total_views': total_artwork_views,
+                'by_category': artworks_by_category,
+                'top_viewed': list(top_viewed_artworks)
+            },
+            'documents': {
+                'total': total_documents,
+                'public': public_documents,
+                'restricted': restricted_documents,
+                'private': private_documents,
+                'featured': featured_documents,
+                'downloadable': downloadable_documents,
+                'added_today': documents_today,
+                'added_this_week': documents_week,
+                'added_this_month': documents_month,
+                'total_views': total_document_views,
+                'total_downloads': total_document_downloads,
+                'by_type': documents_by_type,
+                'top_viewed': list(top_viewed_documents),
+                'top_downloaded': list(top_downloaded_documents)
+            },
+            'museums': {
+                'total': total_museums,
+                'active': active_museums,
+                'featured': featured_museums,
+                'added_today': museums_today,
+                'added_this_week': museums_week,
+                'added_this_month': museums_month,
+                'total_views': total_museum_views,
+                'total_visitors': total_museum_visitors,
+                'by_category': museums_by_category,
+                'top_viewed': list(top_viewed_museums)
+            },
+            'collections': {
+                'total': total_collections,
+                'featured': featured_collections,
+                'added_today': collections_today,
+                'added_this_week': collections_week,
+                'added_this_month': collections_month
+            },
+            'library_collections': {
+                'total': total_library_collections,
+                'featured': featured_library_collections
+            }
+        },
+        'metadata': {
+            'categories': total_categories,
+            'document_types': total_document_types,
+            'museum_categories': total_museum_categories,
+            'subjects': total_subjects,
+            'authors': total_authors,
+            'publishers': total_publishers
+        },
+        'engagement': {
+            'document_reviews': {
+                'total': total_document_reviews,
+                'average_rating': round(avg_document_rating, 2)
+            },
+            'museum_reviews': {
+                'total': total_museum_reviews,
+                'average_rating': round(avg_museum_rating, 2)
+            },
+            'reading_lists': {
+                'total': total_reading_lists,
+                'public': public_reading_lists,
+                'private': private_reading_lists
+            }
+        },
+        'exhibitions': {
+            'total_exhibitions': total_exhibitions,
+            'total_museum_exhibitions': total_museum_exhibitions,
+            'active_exhibitions': active_exhibitions,
+            'active_museum_exhibitions': active_museum_exhibitions
+        },
+        'growth_trends': monthly_stats
     })
