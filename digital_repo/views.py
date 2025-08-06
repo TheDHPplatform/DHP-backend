@@ -228,6 +228,15 @@ class LibraryDocumentViewSet(viewsets.ModelViewSet):
             'message': 'View count incremented'
         })
 
+    def get_permissions(self):
+        """
+        Override permissions for specific actions
+        """
+        if self.action == 'increment_view':
+            # Allow anyone to increment view count (no authentication required)
+            return []
+        return super().get_permissions()
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         """Advanced search with multiple filters"""
