@@ -216,7 +216,18 @@ class LibraryDocumentViewSet(viewsets.ModelViewSet):
         
         document.increment_download_count()
         return Response({'download_url': document.document_file.url if document.document_file else None})
-    
+
+    @action(detail=True, methods=['post'])
+    def increment_view(self, request, slug=None):
+        """Increment view count for a document"""
+        document = self.get_object()
+        document.increment_view_count()
+        return Response({
+            'success': True, 
+            'view_count': document.view_count,
+            'message': 'View count incremented'
+        })
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         """Advanced search with multiple filters"""
