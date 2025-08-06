@@ -279,3 +279,71 @@ class MuseumCollectionDetailSerializer(MuseumCollectionSerializer):
     class Meta(MuseumCollectionSerializer.Meta):
         fields = MuseumCollectionSerializer.Meta.fields
 
+
+# Archive Serializers
+class ArchiveTypeSerializer(serializers.ModelSerializer):
+    archive_count = serializers.SerializerMethodField()
+    
+    def get_archive_count(self, obj):
+        return obj.archives.count()
+    
+    class Meta:
+        model = ArchiveType
+        fields = '__all__'
+
+
+class ArchiveSerializer(serializers.ModelSerializer):
+    archive_type = ArchiveTypeSerializer(read_only=True)
+    archive_type_id = serializers.IntegerField(write_only=True)
+    uploaded_by_username = serializers.CharField(source='uploaded_by.username', read_only=True)
+    tags_list = serializers.SerializerMethodField()
+    
+    def get_tags_list(self, obj):
+        return obj.get_tags_list()
+    
+    class Meta:
+        model = Archive
+        fields = '__all__'
+        read_only_fields = ('slug', 'view_count', 'click_count', 'uploaded_by', 'created_at', 'updated_at')
+
+
+class ArchiveDetailSerializer(ArchiveSerializer):
+    archive_type = ArchiveTypeSerializer(read_only=True)
+    
+    class Meta(ArchiveSerializer.Meta):
+        fields = ArchiveSerializer.Meta.fields
+
+
+# Digital Content Serializers
+class DigitalContentTypeSerializer(serializers.ModelSerializer):
+    content_count = serializers.SerializerMethodField()
+    
+    def get_content_count(self, obj):
+        return obj.digital_contents.count()
+    
+    class Meta:
+        model = DigitalContentType
+        fields = '__all__'
+
+
+class DigitalContentSerializer(serializers.ModelSerializer):
+    content_type = DigitalContentTypeSerializer(read_only=True)
+    content_type_id = serializers.IntegerField(write_only=True)
+    uploaded_by_username = serializers.CharField(source='uploaded_by.username', read_only=True)
+    tags_list = serializers.SerializerMethodField()
+    
+    def get_tags_list(self, obj):
+        return obj.get_tags_list()
+    
+    class Meta:
+        model = DigitalContent
+        fields = '__all__'
+        read_only_fields = ('slug', 'view_count', 'click_count', 'uploaded_by', 'created_at', 'updated_at')
+
+
+class DigitalContentDetailSerializer(DigitalContentSerializer):
+    content_type = DigitalContentTypeSerializer(read_only=True)
+    
+    class Meta(DigitalContentSerializer.Meta):
+        fields = DigitalContentSerializer.Meta.fields
+

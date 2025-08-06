@@ -26,6 +26,14 @@ router.register(r'museums/exhibitions', views.MuseumExhibitionViewSet)
 router.register(r'museums/reviews', views.MuseumReviewViewSet)
 router.register(r'museums/collections', views.MuseumCollectionViewSet)
 
+# Archive routes
+router.register(r'archives/types', views.ArchiveTypeViewSet)
+router.register(r'archives', views.ArchiveViewSet)
+
+# Digital Content routes
+router.register(r'digital-content/types', views.DigitalContentTypeViewSet)
+router.register(r'digital-content', views.DigitalContentViewSet)
+
 urlpatterns = [
     path('user/content/', views.user_content_overview, name='user-content-overview'),
     path('admin/statistics/', views.admin_statistics_overview, name='admin-statistics-overview'),

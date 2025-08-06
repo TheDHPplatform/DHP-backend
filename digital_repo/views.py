@@ -935,3 +935,154 @@ def admin_statistics_overview(request):
         },
         'growth_trends': monthly_stats
     })
+
+
+# Archive ViewSets
+class ArchiveTypeViewSet(viewsets.ModelViewSet):
+    queryset = ArchiveType.objects.annotate(archive_count=Count('archives'))
+    serializer_class = ArchiveTypeSerializer
+    lookup_field = 'slug'
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+
+
+class ArchiveViewSet(viewsets.ModelViewSet):
+    queryset = Archive.objects.filter(status='active')
+    serializer_class = ArchiveSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    lookup_field = 'slug'
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['archive_type', 'access_level', 'status', 'language']
+    search_fields = ['title', 'description', 'source_institution', 'tags']
+    ordering_fields = ['created_at', 'title', 'view_count', 'click_count']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ArchiveDetailSerializer
+        return ArchiveSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+                
+        # Filter by access level based on user authentication
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(access_level='public')
+        
+        return queryset
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.view_count += 1
+        instance.save(update_fields=['view_count'])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def track_click(self, request, slug=None):
+        """Track external link clicks"""
+        archive = self.get_object()
+        archive.click_count += 1
+        archive.save(update_fields=['click_count'])
+        return Response({'message': 'Click tracked successfully'})
+    
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        """Get archives grouped by type"""
+        archive_type_slug = request.query_params.get('type')
+        if not archive_type_slug:
+            return Response({'error': 'Type parameter is required'}, status=400)
+        
+        try:
+            archive_type = ArchiveType.objects.get(slug=archive_type_slug)
+            archives = self.get_queryset().filter(archive_type=archive_type)
+            serializer = self.get_serializer(archives, many=True)
+            return Response({
+                'archive_type': ArchiveTypeSerializer(archive_type).data,
+                'archives': serializer.data
+            })
+        except ArchiveType.DoesNotExist:
+            return Response({'error': 'Archive type not found'}, status=404)
+
+
+# Digital Content ViewSets
+class DigitalContentTypeViewSet(viewsets.ModelViewSet):
+    queryset = DigitalContentType.objects.annotate(content_count=Count('digital_contents'))
+    serializer_class = DigitalContentTypeSerializer
+    lookup_field = 'slug'
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+
+
+class DigitalContentViewSet(viewsets.ModelViewSet):
+    queryset = DigitalContent.objects.filter(status='active')
+    serializer_class = DigitalContentSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    lookup_field = 'slug'
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['content_type', 'access_level', 'status', 'language', 'format_type']
+    search_fields = ['title', 'description', 'source_organization', 'tags']
+    ordering_fields = ['created_at', 'title', 'view_count', 'click_count']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return DigitalContentDetailSerializer
+        return DigitalContentSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by content type name if provided
+        content_type_name = self.request.query_params.get('type')
+        if content_type_name:
+            queryset = queryset.filter(content_type__name__icontains=content_type_name)
+        
+        # Filter by access level based on user authentication
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(access_level='public')
+        
+        return queryset
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.view_count += 1
+        instance.save(update_fields=['view_count'])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def track_click(self, request, slug=None):
+        """Track external link clicks"""
+        content = self.get_object()
+        content.click_count += 1
+        content.save(update_fields=['click_count'])
+        return Response({'message': 'Click tracked successfully'})
+    
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        """Get digital content grouped by type"""
+        content_type_slug = request.query_params.get('type')
+        if not content_type_slug:
+            return Response({'error': 'Type parameter is required'}, status=400)
+        
+        try:
+            content_type = DigitalContentType.objects.get(slug=content_type_slug)
+            contents = self.get_queryset().filter(content_type=content_type)
+            serializer = self.get_serializer(contents, many=True)
+            return Response({
+                'content_type': DigitalContentTypeSerializer(content_type).data,
+                'contents': serializer.data
+            })
+        except DigitalContentType.DoesNotExist:
+            return Response({'error': 'Content type not found'}, status=404)

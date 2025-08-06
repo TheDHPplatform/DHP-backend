@@ -704,3 +704,137 @@ class MuseumCollection(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+
+class ArchiveType(models.Model):
+    """Types of archives like Historical Documents, Government Records, etc."""
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(unique=True, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
+
+
+class Archive(models.Model):
+    """Archive items that link to external sources"""
+    ACCESS_LEVELS = [
+        ('public', 'Public'),
+        ('restricted', 'Restricted'),
+        ('private', 'Private'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('under_review', 'Under Review'),
+    ]
+    
+    title = models.CharField(max_length=300)
+    slug = models.SlugField(unique=True, blank=True)
+    description = models.TextField()
+    archive_type = models.ForeignKey(ArchiveType, on_delete=models.CASCADE, related_name='archives')
+    external_url = models.URLField(help_text="Link to the external archive source")
+    thumbnail_url = models.URLField(blank=True, null=True, help_text="URL to thumbnail image")
+    source_institution = models.CharField(max_length=200, help_text="Institution that owns/hosts this archive")
+    date_created = models.DateField(blank=True, null=True, help_text="Original creation date of the archived material")
+    language = models.CharField(max_length=50, default='en')
+    access_level = models.CharField(max_length=20, choices=ACCESS_LEVELS, default='public')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    tags = models.TextField(blank=True, help_text="Comma-separated tags")
+    view_count = models.PositiveIntegerField(default=0)
+    click_count = models.PositiveIntegerField(default=0)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_archives')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+    
+    def get_tags_list(self):
+        return [tag.strip() for tag in self.tags.split(',') if tag.strip()] if self.tags else []
+    
+    def __str__(self):
+        return self.title
+    
+    class Meta:
+        ordering = ['-created_at']
+
+
+class DigitalContentType(models.Model):
+    """Types of digital content like Datasets, Multimedia, etc."""
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(unique=True, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
+
+
+class DigitalContent(models.Model):
+    """Digital content items that link to external sources"""
+    ACCESS_LEVELS = [
+        ('public', 'Public'),
+        ('restricted', 'Restricted'),
+        ('private', 'Private'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('under_review', 'Under Review'),
+    ]
+    
+    title = models.CharField(max_length=300)
+    slug = models.SlugField(unique=True, blank=True)
+    description = models.TextField()
+    content_type = models.ForeignKey(DigitalContentType, on_delete=models.CASCADE, related_name='digital_contents')
+    external_url = models.URLField(help_text="Link to the external content source")
+    thumbnail_url = models.URLField(blank=True, null=True, help_text="URL to thumbnail image")
+    source_organization = models.CharField(max_length=200, help_text="Organization that provides this content")
+    license = models.CharField(max_length=100, blank=True, help_text="License information")
+    format_type = models.CharField(max_length=50, blank=True, help_text="File format or content format")
+    size = models.CharField(max_length=50, blank=True, help_text="Size of the content (file size, dataset size, etc.)")
+    language = models.CharField(max_length=50, default='en')
+    access_level = models.CharField(max_length=20, choices=ACCESS_LEVELS, default='public')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    tags = models.TextField(blank=True, help_text="Comma-separated tags")
+    view_count = models.PositiveIntegerField(default=0)
+    click_count = models.PositiveIntegerField(default=0)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_digital_contents')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+    
+    def get_tags_list(self):
+        return [tag.strip() for tag in self.tags.split(',') if tag.strip()] if self.tags else []
+    
+    def __str__(self):
+        return self.title
+    
+    class Meta:
+        ordering = ['-created_at']
