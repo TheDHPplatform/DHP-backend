@@ -34,6 +34,9 @@ class UserSerializer(serializers.ModelSerializer):
         return get_user_type(obj)
 
     def create(self, validated_data):
+        validated_data['email'] = validated_data.get('email', '').lower()
+        if(User.objects.filter(email=validated_data['email']).exists()):
+            raise serializers.ValidationError("A user with this email already exists.")
         user = User.objects.create_user(**validated_data)
         # Assign new users to 'public' group by default
         from django.contrib.auth.models import Group
