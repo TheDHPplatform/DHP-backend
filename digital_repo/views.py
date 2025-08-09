@@ -34,6 +34,41 @@ class ArtworkViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'title', 'view_count']
     ordering = ['-created_at']
     
+    def get_permissions(self):
+        """
+        Instantiate and return the list of permissions that this view requires.
+        """
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticatedOrReadOnly]
+        return [permission() for permission in permission_classes]
+    
+    def perform_update(self, serializer):
+        """
+        Check if the user can update this artwork (owner or admin).
+        """
+        artwork = self.get_object()
+        user = self.request.user
+        
+        if not (user.is_superuser or user.is_staff or artwork.uploaded_by == user):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to edit this artwork.")
+        
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        """
+        Check if the user can delete this artwork (owner or admin).
+        """
+        user = self.request.user
+        
+        if not (user.is_superuser or user.is_staff or instance.uploaded_by == user):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to delete this artwork.")
+        
+        instance.delete()
+    
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.increment_view_count()
@@ -96,6 +131,25 @@ class ArtworkViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def view(self, request, slug=None):
+        """Increment view count for an artwork"""
+        artwork = self.get_object()
+        artwork.increment_view_count()
+        return Response({
+            'view_count': artwork.view_count,
+            'message': 'View count incremented'
+        })
+
+    def get_permissions(self):
+        """
+        Override permissions for specific actions
+        """
+        if self.action == 'view':
+            # Allow anyone to increment view count (no authentication required)
+            return []
+        return super().get_permissions()
 
 class ExhibitionViewSet(viewsets.ModelViewSet):
     queryset = Exhibition.objects.all()
@@ -411,9 +465,17 @@ class MuseumViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'name', 'view_count', 'rating', 'established_year']
     ordering = ['-created_at']
     
+    def get_queryset(self):
+        if self.action == 'retrieve':
+            # Use prefetch_related for the retrieve action to include all content
+            return Museum.objects.filter(status='active').prefetch_related(
+                'sections', 'gallery_items', 'artifacts', 'virtual_exhibitions', 'additional_info'
+            )
+        return super().get_queryset()
+    
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return MuseumDetailSerializer
+            return MuseumDetailWithContentSerializer
         return MuseumSerializer
     
     def retrieve(self, request, *args, **kwargs):
@@ -1106,3 +1168,105 @@ class DigitalContentViewSet(viewsets.ModelViewSet):
             })
         except DigitalContentType.DoesNotExist:
             return Response({'error': 'Content type not found'}, status=404)
+
+
+# New ViewSets for museum content management
+class MuseumSectionViewSet(viewsets.ModelViewSet):
+    queryset = MuseumSection.objects.all()
+    serializer_class = MuseumSectionSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['museum', 'section_type', 'is_active']
+    ordering_fields = ['order', 'created_at']
+    ordering = ['order', 'created_at']
+    # http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        museum_slug = self.request.query_params.get('museum', '')
+        if museum_slug:
+            return self.queryset.filter(museum__slug=museum_slug)
+        return self.queryset
+
+
+class MuseumGalleryItemViewSet(viewsets.ModelViewSet):
+    queryset = MuseumGalleryItem.objects.all()
+    serializer_class = MuseumGalleryItemSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['museum', 'is_featured']
+    ordering_fields = ['order', 'created_at']
+    ordering = ['order', 'created_at']
+    
+    def get_queryset(self):
+        museum_slug = self.request.query_params.get('museum', '')
+        if museum_slug:
+            return self.queryset.filter(museum__slug=museum_slug)
+        return self.queryset
+
+
+class MuseumArtifactViewSet(viewsets.ModelViewSet):
+    queryset = MuseumArtifact.objects.all()
+    serializer_class = MuseumArtifactSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['museum', 'category', 'is_on_display']
+    search_fields = ['name', 'description', 'historical_period', 'origin']
+    ordering_fields = ['order', 'created_at', 'name']
+    ordering = ['order', 'created_at']
+    
+    def get_queryset(self):
+        museum_slug = self.request.query_params.get('museum', '')
+        if museum_slug:
+            return self.queryset.filter(museum__slug=museum_slug)
+        return self.queryset
+
+
+class MuseumVirtualExhibitionViewSet(viewsets.ModelViewSet):
+    queryset = MuseumVirtualExhibition.objects.filter(is_active=True)
+    serializer_class = MuseumVirtualExhibitionSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['museum', 'exhibition_type', 'is_featured', 'requires_registration']
+    search_fields = ['title', 'description']
+    ordering_fields = ['order', 'created_at', 'view_count']
+    ordering = ['order', 'created_at']
+    
+    def get_queryset(self):
+        museum_slug = self.request.query_params.get('museum', '')
+        if museum_slug:
+            return self.queryset.filter(museum__slug=museum_slug)
+        return self.queryset
+    
+    @action(detail=True, methods=['post'])
+    def access(self, request, pk=None):
+        """Increment view count when virtual exhibition is accessed"""
+        virtual_exhibition = self.get_object()
+        virtual_exhibition.increment_view_count()
+        return Response({'status': 'access recorded', 'url': virtual_exhibition.url})
+
+
+class MuseumInfoViewSet(viewsets.ModelViewSet):
+    queryset = MuseumInfo.objects.all()
+    serializer_class = MuseumInfoSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get_queryset(self):
+        museum_slug = self.request.query_params.get('museum', '')
+        if museum_slug:
+            return self.queryset.filter(museum__slug=museum_slug)
+        return self.queryset
+
+
+# Enhanced Museum ViewSet that uses the detailed serializer with all content
+class MuseumDetailWithContentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Museum.objects.filter(status='active').prefetch_related(
+        'sections', 'gallery_items', 'artifacts', 'virtual_exhibitions', 'additional_info'
+    )
+    serializer_class = MuseumDetailWithContentSerializer
+    lookup_field = 'slug'
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.increment_view_count()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)

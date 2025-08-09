@@ -838,3 +838,170 @@ class DigitalContent(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+
+# New models for museum content management
+class MuseumSection(models.Model):
+    """Sections of content for museum detail pages"""
+    SECTION_TYPES = [
+        ('overview', 'Overview'),
+        ('cultural-heritage', 'Cultural Heritage'),
+        ('natural-history', 'Natural History'),
+        ('history', 'History'),
+        ('exhibitions', 'Exhibitions'),
+        ('custom', 'Custom Section'),
+    ]
+    
+    museum = models.ForeignKey(Museum, on_delete=models.CASCADE, related_name='sections')
+    section_type = models.CharField(max_length=20, choices=SECTION_TYPES)
+    title = models.CharField(max_length=200)
+    content = models.JSONField(default=list, help_text="List of content paragraphs")
+    subsections = models.JSONField(default=list, blank=True, help_text="List of subsection objects")
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.museum.name} - {self.title}"
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        unique_together = ['museum', 'section_type']
+
+
+class MuseumGalleryItem(models.Model):
+    """Gallery images for museums"""
+    museum = models.ForeignKey(Museum, on_delete=models.CASCADE, related_name='gallery_items')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    image = models.ImageField(upload_to='museums/gallery/')
+    image_url = models.URLField(blank=True, help_text="Alternative to uploaded image")
+    order = models.PositiveIntegerField(default=0)
+    is_featured = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def get_image_url(self):
+        if self.image:
+            return self.image.url
+        return self.image_url
+    
+    def __str__(self):
+        return f"{self.museum.name} - {self.title}"
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+
+
+class MuseumArtifact(models.Model):
+    """Artifacts and items displayed in museums"""
+    ARTIFACT_CATEGORIES = [
+        ('royal-regalia', 'Royal Regalia'),
+        ('ceremonial-weapons', 'Ceremonial Weapons'),
+        ('musical-instruments', 'Musical Instruments'),
+        ('domestic-items', 'Domestic Items'),
+        ('religious-objects', 'Religious Objects'),
+        ('artwork', 'Artwork'),
+        ('tools', 'Tools'),
+        ('textiles', 'Textiles'),
+        ('jewelry', 'Jewelry'),
+        ('pottery', 'Pottery'),
+        ('other', 'Other'),
+    ]
+    
+    museum = models.ForeignKey(Museum, on_delete=models.CASCADE, related_name='artifacts')
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=30, choices=ARTIFACT_CATEGORIES)
+    historical_period = models.CharField(max_length=100, blank=True)
+    origin = models.CharField(max_length=200, blank=True)
+    materials = models.CharField(max_length=200, blank=True, help_text="Materials used to create the artifact")
+    dimensions = models.CharField(max_length=100, blank=True, help_text="Size/dimensions of the artifact")
+    image = models.ImageField(upload_to='museums/artifacts/', blank=True, null=True)
+    image_url = models.URLField(blank=True, help_text="Alternative to uploaded image")
+    is_on_display = models.BooleanField(default=True)
+    acquisition_date = models.DateField(blank=True, null=True)
+    acquisition_method = models.CharField(max_length=100, blank=True, help_text="How the artifact was acquired")
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def get_image_url(self):
+        if self.image:
+            return self.image.url
+        return self.image_url
+    
+    def __str__(self):
+        return f"{self.museum.name} - {self.name}"
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+
+
+class MuseumVirtualExhibition(models.Model):
+    """Virtual exhibitions and digital experiences for museums"""
+    EXHIBITION_TYPES = [
+        ('tour', 'Virtual Tour'),
+        ('experience', '360° Experience'),
+        ('exhibition', 'Digital Exhibition'),
+        ('interactive', 'Interactive Experience'),
+        ('documentary', 'Documentary'),
+        ('audio-guide', 'Audio Guide'),
+    ]
+    
+    museum = models.ForeignKey(Museum, on_delete=models.CASCADE, related_name='virtual_exhibitions')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    exhibition_type = models.CharField(max_length=20, choices=EXHIBITION_TYPES)
+    url = models.URLField(help_text="URL to the virtual exhibition/experience")
+    thumbnail_image = models.ImageField(upload_to='museums/virtual_exhibitions/', blank=True, null=True)
+    thumbnail_url = models.URLField(blank=True, help_text="Alternative to uploaded thumbnail")
+    duration = models.CharField(max_length=50, blank=True, help_text="Estimated duration (e.g., '45 minutes')")
+    is_featured = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    requires_registration = models.BooleanField(default=False)
+    access_instructions = models.TextField(blank=True, help_text="Instructions for accessing the virtual exhibition")
+    technical_requirements = models.TextField(blank=True, help_text="Technical requirements (VR headset, etc.)")
+    order = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def get_thumbnail_url(self):
+        if self.thumbnail_image:
+            return self.thumbnail_image.url
+        return self.thumbnail_url
+    
+    def increment_view_count(self):
+        self.view_count += 1
+        self.save(update_fields=['view_count'])
+    
+    def __str__(self):
+        return f"{self.museum.name} - {self.title}"
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+
+
+class MuseumInfo(models.Model):
+    """Additional operational information for museums"""
+    museum = models.OneToOneField(Museum, on_delete=models.CASCADE, related_name='additional_info')
+    hours = models.CharField(max_length=200, default="9:00 AM - 5:00 PM")
+    contact = models.CharField(max_length=200, blank=True)
+    admission = models.TextField(blank=True, help_text="Admission pricing and details")
+    facilities = models.JSONField(default=list, help_text="List of available facilities")
+    directions = models.TextField(blank=True, help_text="Directions to the museum")
+    parking_info = models.TextField(blank=True)
+    accessibility_info = models.TextField(blank=True)
+    group_booking_info = models.TextField(blank=True)
+    special_programs = models.JSONField(default=list, help_text="List of special programs offered")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.museum.name} - Additional Info"
+    
+    class Meta:
+        verbose_name = "Museum Additional Information"
+        verbose_name_plural = "Museum Additional Information"

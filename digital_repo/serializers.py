@@ -347,3 +347,70 @@ class DigitalContentDetailSerializer(DigitalContentSerializer):
     class Meta(DigitalContentSerializer.Meta):
         fields = DigitalContentSerializer.Meta.fields
 
+
+# New serializers for museum content management
+class MuseumSectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MuseumSection
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class MuseumGalleryItemSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    
+    def get_image_url(self, obj):
+        return obj.get_image_url()
+    
+    class Meta:
+        model = MuseumGalleryItem
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class MuseumArtifactSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    
+    def get_image_url(self, obj):
+        return obj.get_image_url()
+    
+    class Meta:
+        model = MuseumArtifact
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class MuseumVirtualExhibitionSerializer(serializers.ModelSerializer):
+    thumbnail_url = serializers.SerializerMethodField()
+    exhibition_type_display = serializers.CharField(source='get_exhibition_type_display', read_only=True)
+    
+    def get_thumbnail_url(self, obj):
+        return obj.get_thumbnail_url()
+    
+    class Meta:
+        model = MuseumVirtualExhibition
+        fields = '__all__'
+        read_only_fields = ('view_count', 'created_at', 'updated_at')
+
+
+class MuseumInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MuseumInfo
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+# Enhanced Museum Detail Serializer with all content
+class MuseumDetailWithContentSerializer(MuseumDetailSerializer):
+    sections = MuseumSectionSerializer(many=True, read_only=True)
+    gallery_items = MuseumGalleryItemSerializer(many=True, read_only=True)
+    artifacts = MuseumArtifactSerializer(many=True, read_only=True)
+    virtual_exhibitions = MuseumVirtualExhibitionSerializer(many=True, read_only=True)
+    additional_info = MuseumInfoSerializer(read_only=True)
+    
+    class Meta(MuseumDetailSerializer.Meta):
+        fields = MuseumDetailSerializer.Meta.fields + [
+            'sections', 'gallery_items', 'artifacts', 'virtual_exhibitions', 'additional_info'
+        ]
+

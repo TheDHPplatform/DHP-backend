@@ -21,10 +21,17 @@ router.register(r'library/reviews', views.DocumentReviewViewSet)
 
 # Museum routes
 router.register(r'museums/categories', views.MuseumCategoryViewSet)
-router.register(r'museums', views.MuseumViewSet)
 router.register(r'museums/exhibitions', views.MuseumExhibitionViewSet)
 router.register(r'museums/reviews', views.MuseumReviewViewSet)
 router.register(r'museums/collections', views.MuseumCollectionViewSet)
+
+# Museum content management routes
+router.register(r'museums/sections', views.MuseumSectionViewSet)
+router.register(r'museums/gallery', views.MuseumGalleryItemViewSet)
+router.register(r'museums/artifacts', views.MuseumArtifactViewSet)
+router.register(r'museums/virtual-exhibitions', views.MuseumVirtualExhibitionViewSet)
+router.register(r'museums/info', views.MuseumInfoViewSet)
+router.register(r'museums', views.MuseumViewSet)
 
 # Archive routes
 router.register(r'archives/types', views.ArchiveTypeViewSet)
